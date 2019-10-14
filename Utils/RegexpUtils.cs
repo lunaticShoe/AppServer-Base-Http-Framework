@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace SNMPAgent.Utils
+namespace AppServerBase.Utils
 {
     public static class RegexpUtils
     {

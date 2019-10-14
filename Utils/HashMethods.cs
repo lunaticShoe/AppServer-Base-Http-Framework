@@ -4,7 +4,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace SNMPAgent.Utils
+namespace AppServerBase.Utils
 {
     public static class HashMethods
     {

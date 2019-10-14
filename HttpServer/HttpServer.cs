@@ -1,4 +1,5 @@
-﻿using SNMPAgent.Utils;
+﻿using AppServerBase.Auth;
+using AppServerBase.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,28 +11,36 @@ using System.Threading;
 
 namespace AppServerBase.HttpServer
 {
-    public class HttpServer
+    public class HTTPServer
     {
         private HttpListener Listener = new HttpListener();
 
         private List<Type> ModuleTypesCache = new List<Type>();
 
-        public HttpServer()
+
+        private Func<bool> CheckLicenseDelegate;
+        private Func<string, SessionBase> CheckSessionDelegate;
+
+        public HTTPServer()
         {
             //ServicePointManager.DefaultConnectionLimit = 5000;
             //ServicePointManager.Expect100Continue = false;
             //ServicePointManager.MaxServicePoints = 5000;
             ServicePointManager.MaxServicePoints = int.MaxValue;
-            
 
-            ModuleTypesCache = (from t in Assembly.GetExecutingAssembly().GetTypes()
+            var assemblies = AppDomain.CurrentDomain
+                .GetAssemblies().Where(x => x.FullName.Contains("SNMPAgent"));
+
+            ModuleTypesCache = (from t in Assembly.GetCallingAssembly().GetTypes()
                                        where t.IsClass && t.CustomAttributes.Count() > 0
                                        && t.BaseType.Name == "HttpServerModule"
                                 select t).ToList();
 
         }
 
-        public static void Send404(HttpListenerResponse Response)
+        
+
+        private void Send404(HttpListenerResponse Response)
         {
             try
             {
@@ -48,7 +57,7 @@ namespace AppServerBase.HttpServer
         }
 
 
-        public static void SendJSONMessage(HttpListenerResponse Response, string json)
+        private void SendJSONMessage(HttpListenerResponse Response, string json)
         {
             try
             {         
@@ -72,6 +81,16 @@ namespace AppServerBase.HttpServer
 
                 ServerLog.LogError(error_message_text, "SERVER_ERROR", MessageType.SERVER_ERROR);
             }
+        }
+
+        public void SetCheckLicenseMethod(Func<bool> checkLicense)
+        {
+            CheckLicenseDelegate = checkLicense;
+        }
+
+        public void SetCheckSessionMethod(Func<string, SessionBase> checkSession)
+        {
+            CheckSessionDelegate = checkSession;
         }
 
         public void Start(string[] address)
@@ -197,10 +216,16 @@ namespace AppServerBase.HttpServer
                 if (t.BaseType.Name != typeof(HttpServerModule).Name)
                     continue;
 
+
                 foreach (var attribute in t.GetCustomAttributes())
                     if (attribute is ServerModuleAttribute &&
                         (attribute as ServerModuleAttribute).GetModuleName() == module)
-                        return Activator.CreateInstance(t) as HttpServerModule;   
+                    {
+                        var serverModule = Activator.CreateInstance(t) as HttpServerModule;
+                        serverModule.SetCheckLicenseMethod(CheckLicenseDelegate);
+                        serverModule.SetCheckSessionMethod(CheckSessionDelegate);
+                        return serverModule;
+                    }
             }
             return null;
         }

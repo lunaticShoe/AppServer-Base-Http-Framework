@@ -7,7 +7,7 @@ using Newtonsoft.Json.Linq;
 
 namespace AppServerBase.HttpServer
 {
-    class ClientMsg
+    public class ClientMsg
     {
 
         /*

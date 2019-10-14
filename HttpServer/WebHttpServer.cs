@@ -95,6 +95,7 @@ namespace AppServerBase.HttpServer
         private string _rootDirectory;
         private HttpListener _listener;
         private Thread _serverThread;
+        private int Port = 80;
 
 
         public static void Send404(HttpListenerResponse Response)
@@ -114,9 +115,10 @@ namespace AppServerBase.HttpServer
             catch { }
         }
 
-        public WebHttpServer(string path)
+        public WebHttpServer(string path, int port = 80)
         {
-            _rootDirectory = path + "/"+ ServerConfig.ConfData.WebLocation;           
+            _rootDirectory = path;
+            Port = port;
         }
 
         public void Start()
@@ -128,7 +130,7 @@ namespace AppServerBase.HttpServer
         private void Listen()
         {
             _listener = new HttpListener();
-            _listener.Prefixes.Add("http://+:" + ServerConfig.ConfData.WebAppPort.ToString() + "/");
+            _listener.Prefixes.Add($"http://+:{Port}/");
             _listener.Start();
 
             for (int i = 0; i < Environment.ProcessorCount * 5; i++)

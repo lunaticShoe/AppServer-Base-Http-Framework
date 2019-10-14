@@ -1,7 +1,7 @@
 ﻿using Serilog;
 using System;
 
-namespace SNMPAgent.Utils
+namespace AppServerBase.Utils
 {
     public class LogItem
     {
@@ -23,17 +23,23 @@ namespace SNMPAgent.Utils
     public static class ServerLog
     {
         //private static volatile List<LogItem> LogList = new List<LogItem>();
-        //public static int FileRetainedCount = 7;
-
+        private static int FileRetainedCount = 7;
+        private static string LogDirrectory = "/log/";
+       
+        public static void SetLogConfiguration(string logDirrectory, int fileRetainedCount)
+        {
+            LogDirrectory = logDirrectory;
+            FileRetainedCount = fileRetainedCount;
+        }
 
         public static void Log(string message)
         {
-            var dir = ServerConfig.GetServerDir() + "/log/total/";
+            var dir = LogDirrectory + "/log/total/";
 
             var log = new LoggerConfiguration()
                 .WriteTo.RollingFile(
                     dir + "t_log_{Date}.txt",
-                    retainedFileCountLimit: ServerConfig.FileRetainedCount,
+                    retainedFileCountLimit: FileRetainedCount,
                     shared: true,
                     outputTemplate: "{Timestamp:dd.MM.yyyy HH:mm:ss.fff zzz} [{Level}] {Message}{NewLine}{Exception}") 
                 .CreateLogger();
@@ -43,12 +49,12 @@ namespace SNMPAgent.Utils
 
         public static void LogDebug(string message)
         {
-            var dir = ServerConfig.GetServerDir() + "/log/total/";
+            var dir = LogDirrectory + "/log/total/";
 
             var log = new LoggerConfiguration()
                 .WriteTo.RollingFile(
                     dir + "d_log_{Date}.txt",
-                    retainedFileCountLimit: ServerConfig.FileRetainedCount,
+                    retainedFileCountLimit: FileRetainedCount,
                     shared: true,
                     outputTemplate: "{Timestamp:dd.MM.yyyy HH:mm:ss.fff zzz} [{Level}] {Message}{NewLine}{Exception}")
                 .CreateLogger();
@@ -83,12 +89,12 @@ namespace SNMPAgent.Utils
             if (ErrorCode != "")
                 msg += "\nError type: " + ErrorCode;
 
-            var dir = ServerConfig.GetServerDir() + "/log/error/";
+            var dir = LogDirrectory + "/log/error/";
 
             var log = new LoggerConfiguration()
                 .WriteTo.RollingFile(
                     dir + "e_log_{Date}.txt",
-                    retainedFileCountLimit: ServerConfig.FileRetainedCount,
+                    retainedFileCountLimit: FileRetainedCount,
                     shared: true,
                     outputTemplate: "{Timestamp:dd.MM.yyyy HH:mm:ss.fff zzz} [{Level}] {Message}{NewLine}{Exception}") 
                 .CreateLogger();
@@ -97,12 +103,12 @@ namespace SNMPAgent.Utils
 
         public static void LogAuthEvent(string message)
         {
-            var dir = ServerConfig.GetServerDir() + "/log/auth/";
+            var dir = LogDirrectory + "/log/auth/";
 
             var log = new LoggerConfiguration()
                 .WriteTo.RollingFile(
                     dir + "a_log_{Date}.txt",
-                    retainedFileCountLimit: ServerConfig.FileRetainedCount,
+                    retainedFileCountLimit: FileRetainedCount,
                     shared: true,
                     outputTemplate: "{Timestamp:dd.MM.yyyy HH:mm:ss.fff zzz} [{Level}] {Message}{NewLine}{Exception}") 
                 .CreateLogger();
@@ -125,12 +131,12 @@ namespace SNMPAgent.Utils
 
         public static void LogUserEvent(string login, string projectName, string message)
         {
-            var dir = ServerConfig.GetServerDir() + "/log/" + projectName + "/" + login + "/";
+            var dir = LogDirrectory + "/log/" + projectName + "/" + login + "/";
 
             var log = new LoggerConfiguration()
                 .WriteTo.RollingFile(
                     dir + "u_log_{Date}.txt",
-                    retainedFileCountLimit: ServerConfig.FileRetainedCount,
+                    retainedFileCountLimit: FileRetainedCount,
                     shared: true,
                     outputTemplate: "{Timestamp:dd.MM.yyyy HH:mm:ss.fff zzz} [{Level}] {Message}{NewLine}{Exception}")
                 .CreateLogger();
@@ -140,12 +146,12 @@ namespace SNMPAgent.Utils
 
         public static void LogEventer(string message)
         {
-            var dir = ServerConfig.GetServerDir() + "/log/";
+            var dir = LogDirrectory + "/log/";
 
             var log = new LoggerConfiguration()
                 .WriteTo.RollingFile(
                     dir + "eventer_log_{Date}.txt",
-                    retainedFileCountLimit: ServerConfig.FileRetainedCount,
+                    retainedFileCountLimit: FileRetainedCount,
                     shared: true,
                     outputTemplate: "{Timestamp:dd.MM.yyyy HH:mm:ss.fff zzz} [{Level}] {Message}{NewLine}{Exception}")
                 .CreateLogger();

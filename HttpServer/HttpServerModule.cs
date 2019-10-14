@@ -1,4 +1,6 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using AppServerBase.Auth;
+using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
@@ -13,6 +15,10 @@ namespace AppServerBase.HttpServer
         protected NameValueCollection UrlParams;
         protected string Body;
         protected HttpListenerContext Context;
+
+        private Func<bool> CheckLicenseDelegate;
+        private Func<string, SessionBase> CheckSessionDelegate;
+
 
         public HttpServerModule()
         {
@@ -83,8 +89,20 @@ namespace AppServerBase.HttpServer
 
         protected virtual bool CheckLicense()
         {
-            return License.License.CheckLicense();
+            if (CheckLicenseDelegate != null)
+                return CheckLicenseDelegate.Invoke();
+            return true;//License.License.CheckLicense();
         }
+        public void SetCheckLicenseMethod(Func<bool> checkLicense)
+        {
+            CheckLicenseDelegate = checkLicense;
+        }
+
+        public void SetCheckSessionMethod(Func<string,SessionBase> checkSession)
+        {
+            CheckSessionDelegate = checkSession;
+        }
+
 
         public HttpServerModule(string moduleName)
         {
@@ -114,7 +132,7 @@ namespace AppServerBase.HttpServer
         }     
         
 
-        protected Session ValidateSession(string body)
+        protected SessionBase ValidateSession(string body)
         {
             string token = "";
             try
@@ -126,7 +144,11 @@ namespace AppServerBase.HttpServer
             {
                 throw new ServerException(ClientMsg.GetErrorMsgInvalidJSON().ToString());
             }
-            return SessionCache.GetValidSession(token);            
+
+            if (CheckSessionDelegate != null)
+                return CheckSessionDelegate.Invoke(token);
+
+            return null; // SessionCache.GetValidSession(token);            
         }
     }
 }

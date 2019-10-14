@@ -6,7 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 
-namespace SNMPAgent.Utils
+namespace AppServerBase.Utils
 {
     public class DataTableEx : DataTable
     {

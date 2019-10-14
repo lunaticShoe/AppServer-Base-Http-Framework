@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace SNMPAgent.Utils
+namespace AppServerBase.Utils
 {
     [AttributeUsage(AttributeTargets.Property)]
     public class ColumnAttribute : Attribute
