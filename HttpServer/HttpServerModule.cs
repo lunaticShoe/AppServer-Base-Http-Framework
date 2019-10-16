@@ -12,6 +12,13 @@ using System.Text;
 
 namespace AppServerBase.HttpServer
 {
+
+    public class MultipartData
+    {
+        public string Name { get; set; }
+        public object Data { get; set; }
+    }
+
     public abstract class HttpServerModule
     {
         protected string ModuleName;        
@@ -80,6 +87,7 @@ namespace AppServerBase.HttpServer
                 else
                 {
                     result = method.Invoke(this, ProcessPrameters(method.GetParameters()));
+                    break;
                 }
             }
 
@@ -103,24 +111,33 @@ namespace AppServerBase.HttpServer
 
             JObject jsonBody = null;
             if (Context.Request.HttpMethod == "POST"
-                && Context.Response.ContentType.Contains("application/json"))
+                && Context.Request.ContentType != null
+                && Context.Request.ContentType.Contains("application/json"))
             {
                 jsonBody = JObject.Parse(Body);
             }
             StreamingMultipartFormDataParser parser = null;
-            if (Context.Response.ContentType.Contains("multipart/form-data"))
+            if (Context.Request.ContentType!=null 
+                && Context.Request.ContentType.Contains("multipart/form-data"))
             {
                 
                 parser = new StreamingMultipartFormDataParser(Context.Request.InputStream, Encoding.UTF8);
 
                 parser.ParameterHandler += parameter =>
                 {
-                    multipartParams.Add(parameter.Name, parameter.Data);
+                    if (!multipartParams.ContainsKey(parameter.Name))
+                        multipartParams.Add(parameter.Name, parameter.Data);
                 };
 
                 parser.FileHandler += (name, fileName, type, disposition, buffer, bytes) =>
                 {
-                    multipartParams.Add(name, new { FileName = fileName, Data = bytes });
+                    var val = new MultipartData { Name = fileName, Data = bytes };
+                    if (!multipartParams.ContainsKey(name))
+                    {
+                        multipartParams.Add(name, new List<MultipartData>() { val });
+                        return;
+                    }
+                    (multipartParams[name] as List<MultipartData>).Add(val);
                 };
 
                 //parser.StreamClosedHandler += () =>
@@ -154,7 +171,7 @@ namespace AppServerBase.HttpServer
                 {
                     if (!jsonBody.ContainsKey(paramName))
                         throw new ServerException(ClientMsg.GetErrorMsgInvalidJSON());
-                    paramValues.Add(Convert.ChangeType(jsonBody[paramName], paramNotation));
+                    paramValues.Add(Convert.ChangeType(jsonBody[paramName].ToString(), param.ParameterType));
                 }
                 if ((paramNotation == typeof(JSONObjectParamAttribute))
                     || (paramNotation == typeof(JSONArrayParamAttribute)))
@@ -164,11 +181,16 @@ namespace AppServerBase.HttpServer
                     paramValues.Add(jsonBody[paramName]);
                 }
                 if ((paramNotation == typeof(MultiPartOSPParamAttribute))
-                    || (paramNotation == typeof(MultiPartAPJParamAttribute)))
+                    || (paramNotation == typeof(MultiPartTextParamAttribute)))
                 {
                     if (!multipartParams.ContainsKey(paramName))
                         throw new Exception($"Parameter not given: {paramName}");
-                    paramValues.Add(multipartParams[paramName]);
+                    if (param.ParameterType.IsArray)
+                        paramValues.Add(multipartParams[paramName]);
+                    else
+                        paramValues.Add(
+                            (multipartParams[paramName] as List<MultipartData>)
+                            .FirstOrDefault());
                 }
             }
 

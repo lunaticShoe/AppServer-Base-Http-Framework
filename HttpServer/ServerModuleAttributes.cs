@@ -132,9 +132,9 @@ namespace AppServerBase.HttpServer
     [AttributeUsage(AttributeTargets.Parameter,
              AllowMultiple = false)
 ]
-    public class MultiPartAPJParamAttribute : ParamAttribute
+    public class MultiPartTextParamAttribute : ParamAttribute
     {
-        public MultiPartAPJParamAttribute(string ParamName) : base(ParamName)
+        public MultiPartTextParamAttribute(string ParamName) : base(ParamName)
         {
         }
     }
