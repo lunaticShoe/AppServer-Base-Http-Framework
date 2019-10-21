@@ -51,13 +51,13 @@ namespace AppServerBase.HttpServer
 
             if (!CheckLicense())
             {
-                result = new ServerModuleResponse(
+                throw new ServerException(
                     new JObject(
                         new JProperty("Message", "Лицензия не активна"),
                         new JProperty("SymbCode", "INVALID_LICENSE")));
 
-                SetResult(result);
-                return result as ServerModuleResponse;
+                //SetResult(result);
+                //return result as ServerModuleResponse;
             }
 
             GetURLs(context);
@@ -79,10 +79,10 @@ namespace AppServerBase.HttpServer
                             select _attr).FirstOrDefault();
                 if (attr == null)
                 {
-                    result = new ServerModuleResponse(
-                    new JObject(
-                        new JProperty("Message", "Неверный метод"),
-                        new JProperty("SymbCode", "INVALID_METHOD")));
+                    //throw new ServerException(
+                    //    new JObject(
+                    //        new JProperty("Message", "Неверный метод"),
+                    //        new JProperty("SymbCode", "INVALID_METHOD")));
                 }
                 else
                 {
