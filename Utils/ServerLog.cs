@@ -24,7 +24,7 @@ namespace AppServerBase.Utils
     {
         //private static volatile List<LogItem> LogList = new List<LogItem>();
         private static int FileRetainedCount = 7;
-        private static string LogDirrectory = "/log/";
+        private static string LogDirrectory = "";
        
         public static void SetLogConfiguration(string logDirrectory, int fileRetainedCount)
         {
