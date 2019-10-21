@@ -60,7 +60,7 @@ namespace AppServerBase.HttpServer
     /// Обозначить параметр как GET-параметр
     /// </summary>
     [AttributeUsage(AttributeTargets.Parameter,
-                     AllowMultiple = true)
+                     AllowMultiple = false)
     ]
     public class GETParamAttribute : ParamAttribute
     {
@@ -72,7 +72,7 @@ namespace AppServerBase.HttpServer
     /// Обозначить параметр как POST-параметр
     /// </summary>
     [AttributeUsage(AttributeTargets.Parameter,
-                     AllowMultiple = true)
+                     AllowMultiple = false)
     ]
     public class POSTParamAttribute : ParamAttribute
     {
@@ -84,7 +84,7 @@ namespace AppServerBase.HttpServer
     /// Обозначить параметр как поле JObject
     /// </summary>
     [AttributeUsage(AttributeTargets.Parameter,
-                     AllowMultiple = true)
+                     AllowMultiple = false)
     ]
     public class JSONParamAttribute : ParamAttribute
     {
@@ -97,7 +97,7 @@ namespace AppServerBase.HttpServer
     /// Обозначить параметр как JObject
     /// </summary>
     [AttributeUsage(AttributeTargets.Parameter,
-                     AllowMultiple = true)
+                     AllowMultiple = false)
     ]
     public class JSONObjectParamAttribute : ParamAttribute
     {
@@ -110,7 +110,7 @@ namespace AppServerBase.HttpServer
     /// Обозначить параметр как JArray
     /// </summary>
     [AttributeUsage(AttributeTargets.Parameter,
-                     AllowMultiple = true)
+                     AllowMultiple = false)
     ]
     public class JSONArrayParamAttribute : ParamAttribute
     {
@@ -119,5 +119,23 @@ namespace AppServerBase.HttpServer
         }
     }
 
+    [AttributeUsage(AttributeTargets.Parameter,
+                 AllowMultiple = false)
+    ]
+    public class MultiPartOSPParamAttribute : ParamAttribute
+    {
+        public MultiPartOSPParamAttribute(string ParamName) : base(ParamName)
+        {
+        }
+    }
 
+    [AttributeUsage(AttributeTargets.Parameter,
+             AllowMultiple = false)
+]
+    public class MultiPartTextParamAttribute : ParamAttribute
+    {
+        public MultiPartTextParamAttribute(string ParamName) : base(ParamName)
+        {
+        }
+    }
 }
