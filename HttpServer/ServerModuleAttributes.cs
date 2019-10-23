@@ -138,4 +138,16 @@ namespace AppServerBase.HttpServer
         {
         }
     }
+
+    [AttributeUsage(AttributeTargets.Parameter,
+             AllowMultiple = false)
+]
+    public class URLParamAttribute : ParamAttribute
+    {
+        public int ParamNumber { get; private set; }
+        public URLParamAttribute(int ParamNumber) : base("")
+        {
+            this.ParamNumber = ParamNumber;
+        }
+    }
 }

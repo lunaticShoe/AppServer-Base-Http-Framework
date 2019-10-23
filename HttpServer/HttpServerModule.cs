@@ -55,13 +55,10 @@ namespace AppServerBase.HttpServer
                     new JObject(
                         new JProperty("Message", "Лицензия не активна"),
                         new JProperty("SymbCode", "INVALID_LICENSE")));
-
-                //SetResult(result);
-                //return result as ServerModuleResponse;
             }
 
-            GetURLs(context);
-            UrlParams = GetUrlParams(context);
+            GetURLs(action);
+            UrlParams = GetUrlParams();
             Body = GetBody(context);
 
             var tp = GetType();
@@ -77,22 +74,20 @@ namespace AppServerBase.HttpServer
                             where (_attr is ServerMethodAttribute)
                             && (_attr as ServerMethodAttribute).URL == action
                             select _attr).FirstOrDefault();
-                if (attr == null)
-                {
-                    //throw new ServerException(
-                    //    new JObject(
-                    //        new JProperty("Message", "Неверный метод"),
-                    //        new JProperty("SymbCode", "INVALID_METHOD")));
-                }
-                else
+                               
+                if (attr != null)
                 {
                     result = method.Invoke(this, ProcessPrameters(method.GetParameters()));
-                    break;
+                    SetResult(result);
+                    return result as ServerModuleResponse;
                 }
             }
 
-            SetResult(result);
-            return result as ServerModuleResponse;
+
+            throw new ServerException(
+                new JObject(
+                    new JProperty("Message", "Неверный метод"),
+                    new JProperty("SymbCode", "INVALID_METHOD")));          
         }
 
         public static object GetDefault(Type type)
@@ -107,45 +102,21 @@ namespace AppServerBase.HttpServer
         private object[] ProcessPrameters(params ParameterInfo[] parameters)
         {
             var paramValues = new List<object>();
-            var multipartParams = new Dictionary<string, object>();
+            Dictionary<string, object> multipartParams = null;// = GetMultiPartParams();
 
             JObject jsonBody = null;
+
             if (Context.Request.HttpMethod == "POST"
-                && Context.Request.ContentType != null
-                && Context.Request.ContentType.Contains("application/json"))
+               && Context.Request.ContentType != null
+               && Context.Request.ContentType.Contains("application/json"))
             {
                 jsonBody = JObject.Parse(Body);
             }
-            StreamingMultipartFormDataParser parser = null;
-            if (Context.Request.ContentType!=null 
-                && Context.Request.ContentType.Contains("multipart/form-data"))
-            {
-                
-                parser = new StreamingMultipartFormDataParser(Context.Request.InputStream, Encoding.UTF8);
 
-                parser.ParameterHandler += parameter =>
-                {
-                    if (!multipartParams.ContainsKey(parameter.Name))
-                        multipartParams.Add(parameter.Name, parameter.Data);
-                };
-
-                parser.FileHandler += (name, fileName, type, disposition, buffer, bytes) =>
-                {
-                    var val = new MultipartData { Name = fileName, Data = bytes };
-                    if (!multipartParams.ContainsKey(name))
-                    {
-                        multipartParams.Add(name, new List<MultipartData>() { val });
-                        return;
-                    }
-                    (multipartParams[name] as List<MultipartData>).Add(val);
-                };
-
-                //parser.StreamClosedHandler += () =>
-                //{
-                //    // Do things when my input stream is closed
-                //};
-                parser.Run();
-            }
+            //if (!Context.Request.ContentType.Contains("application/json"))
+            //{
+            multipartParams = GetMultiPartParams();
+            //}
             
             foreach (var param in parameters)
             {
@@ -180,21 +151,100 @@ namespace AppServerBase.HttpServer
                         throw new ServerException(ClientMsg.GetErrorMsgInvalidJSON());
                     paramValues.Add(jsonBody[paramName]);
                 }
-                if ((paramNotation == typeof(MultiPartOSPParamAttribute))
-                    || (paramNotation == typeof(MultiPartTextParamAttribute)))
+                if (paramNotation == typeof(MultiPartOSPParamAttribute))
                 {
-                    if (!multipartParams.ContainsKey(paramName))
+                    if (multipartParams == null || !multipartParams.ContainsKey(paramName))
                         throw new Exception($"Parameter not given: {paramName}");
                     if (param.ParameterType.IsArray)
-                        paramValues.Add(multipartParams[paramName]);
+                        paramValues.Add((multipartParams[paramName] as List<MultipartData>).ToArray());
                     else
                         paramValues.Add(
                             (multipartParams[paramName] as List<MultipartData>)
                             .FirstOrDefault());
                 }
+                if (paramNotation == typeof(MultiPartTextParamAttribute))
+                {
+                    if (multipartParams == null || !multipartParams.ContainsKey(paramName))
+                        throw new Exception($"Parameter not given: {paramName}");
+                    if (param.ParameterType.IsArray)
+                        paramValues.Add((multipartParams[paramName] as List<MultipartData>)
+                            .Select(md=> md.Data).ToArray());
+                    else
+                        paramValues.Add(
+                            (multipartParams[paramName] as List<MultipartData>)
+                            .FirstOrDefault()?.Data);
+                }
+                if (paramNotation == typeof(URLParamAttribute))
+                {
+                    var num = (valueAttribute as URLParamAttribute).ParamNumber;
+                    if (urlParts.ElementAtOrDefault(num) !=null)
+                    {
+                        paramValues.Add(num);
+                    }
+                }
             }
 
             return paramValues.ToArray();
+        }
+
+        protected virtual Dictionary<string, object> GetMultiPartParams()
+        {
+            var multipartParams = new Dictionary<string, object>();
+                       
+            StreamingMultipartFormDataParser parser = null;
+            if (Context.Request.ContentType != null
+                && Context.Request.ContentType.Contains("multipart/form-data"))
+            {
+
+                parser = new StreamingMultipartFormDataParser(Context.Request.InputStream, Encoding.UTF8);
+
+                parser.ParameterHandler += parameter =>
+                {
+                    var val = new MultipartData { Name = parameter.Name, Data = parameter.Data };
+                    //if (!multipartParams.ContainsKey(parameter.Name))
+                    //    multipartParams.Add(parameter.Name, parameter.Data);
+
+                    if (!multipartParams.ContainsKey(parameter.Name))
+                    {
+                        multipartParams.Add(parameter.Name, new List<MultipartData>() { val });
+                        return;
+                    }
+
+                    (multipartParams[parameter.Name] as List<MultipartData>).Add(val);
+                };
+
+                parser.FileHandler += (name, fileName, type, disposition, buffer, bytes) =>
+                {
+                    var data = new MemoryStream();
+                    data.Write(buffer, 0, bytes);
+
+                    var val = new MultipartData { Name = fileName, Data = data };
+                    if (!multipartParams.ContainsKey(name))
+                    {
+                        multipartParams.Add(name, new List<MultipartData>() { val });
+                        return;
+                    }
+
+                    var item = (multipartParams[name] as List<MultipartData>)
+                                .FirstOrDefault(md => md.Name == fileName);
+
+                    if (item != null)
+                    {
+                        (item.Data as MemoryStream).Write(buffer, 0, bytes);
+                    }
+                    else
+                    {
+                        (multipartParams[name] as List<MultipartData>).Add(val);
+                    }
+                };
+
+                //parser.StreamClosedHandler += () =>
+                //{
+                //    // Do things when my input stream is closed
+                //};
+                parser.Run();
+            }
+            return multipartParams;
         }
 
 
@@ -220,19 +270,35 @@ namespace AppServerBase.HttpServer
             ModuleName = moduleName;
          
         }
-        protected void GetURLs(HttpListenerContext context)
+
+
+        protected string GetModuleName()
         {
-            urlParts = context.Request.Url.AbsolutePath.Split('/');
+            var at = GetType()
+                .GetCustomAttributes()
+                .Where(a => a.GetType() == typeof(HttpServerModule))
+                .FirstOrDefault();
+
+            return (at as ServerModuleAttribute)?.GetModuleName();         
         }
 
-        protected NameValueCollection GetUrlParams(HttpListenerContext context)
+        protected void GetURLs(string actionName)
         {
-            return context.Request.QueryString;
+            var url = GetModuleName() + "/" + actionName;
+            var path = Context.Request.Url.AbsolutePath;
+            url = path.Substring(url.Length);
+            urlParts = url.Split('/');
+        }
+
+        protected NameValueCollection GetUrlParams()
+        {
+            return Context.Request.QueryString;
         }
 
         protected string GetBody(HttpListenerContext context)
         {
-            if (context.Request.HttpMethod == "POST")
+            if (context.Request.HttpMethod == "POST" 
+                && context.Request.ContentType?.IndexOf("multipart/form-data") < 0)
             {
                 using (StreamReader reader = new StreamReader(context.Request.InputStream))
                 {

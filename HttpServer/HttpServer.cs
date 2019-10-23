@@ -15,7 +15,7 @@ namespace AppServerBase.HttpServer
     {
         private HttpListener Listener = new HttpListener();
 
-        private List<Type> ModuleTypesCache = new List<Type>();
+        private Dictionary<string,Type> ModuleTypesCache = new Dictionary<string, Type>();
 
 
         private Func<bool> CheckLicenseDelegate;
@@ -28,14 +28,32 @@ namespace AppServerBase.HttpServer
             //ServicePointManager.MaxServicePoints = 5000;
             ServicePointManager.MaxServicePoints = int.MaxValue;
 
-            var assemblies = AppDomain.CurrentDomain
-                .GetAssemblies().Where(x => x.FullName.Contains("SNMPAgent"));
+            //var assemblies = AppDomain.CurrentDomain
+            //    .GetAssemblies().Where(x => x.FullName.Contains("SNMPAgent"));
 
-            ModuleTypesCache = (from t in Assembly.GetCallingAssembly().GetTypes()
-                                       where t.IsClass && t.CustomAttributes.Count() > 0
-                                       && t.BaseType.Name == "HttpServerModule"
-                                select t).ToList();
 
+            var modules = (from t in Assembly.GetCallingAssembly().GetTypes()
+                           where t.IsClass && t.CustomAttributes.Count() > 0
+                           && t.BaseType == typeof(HttpServerModule)
+                           select t);
+            
+            ModuleTypesCache = modules.ToDictionary(m =>
+                (m.GetCustomAttributes()
+                    .FirstOrDefault(ca =>
+                        ca.GetType() == typeof(ServerModuleAttribute)
+                        ) as ServerModuleAttribute).GetModuleName());
+        }
+
+        private void SendAllowCORS(HttpListenerResponse Response)
+        {
+            try
+            {
+                Response.StatusCode = 200;
+                Response.Headers.Add("Access-Control-Allow-Origin", "*");
+                Response.OutputStream.Close();
+                Response.OutputStream.Dispose();
+            }
+            catch { }
         }
 
         
@@ -131,44 +149,47 @@ namespace AppServerBase.HttpServer
             context.Response.KeepAlive = false;
             var stopwatch = Stopwatch.StartNew();
 
-            try {
-                if (context.Request.HttpMethod == "OPTIONS") {
-                    context.Response.StatusCode = 200;
-                    context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
-                    
-                    context.Response.OutputStream.Close();
-                    context.Response.OutputStream.Dispose();
-                    return;
-                }
+            try
+            {
 
-                string[] urlParts = context.Request.Url.AbsolutePath.Split('/');
-
-                if (urlParts[1] == "")
+                if (context.Request.HttpMethod == "OPTIONS")
                 {
-                    Console.WriteLine("No Module");
-                    ServerLog.LogError("Module return null", "SERVER_ERROR", MessageType.SERVER_ERROR);
-                    Send404(context.Response);
+                    SendAllowCORS(context.Response);
                     return;
                 }
 
-                string httpModuleName = urlParts[1];
+                var url = context.Request.Url.AbsolutePath;
 
+                var rng = new int[] { 0, 1 };
+                string httpModuleName = ModuleTypesCache.Keys
+                    .Where(k => rng.Contains(url.IndexOf(k)))
+                    .FirstOrDefault();
+              
                 var module = GetModule(httpModuleName);
 
                 if (module == null)
                 {
-                    Console.WriteLine("Module " + httpModuleName + " not found");
-                    ServerLog.LogError("Module " + httpModuleName + " not found", "SERVER_ERROR", MessageType.SERVER_ERROR);
+                    var msg = $"{context.Request.Url.AbsolutePath}" +
+                        $"\nModule {httpModuleName} not found" +
+                        $"\n{context.Request.UserAgent}" +
+                        $"\n{context.Request.RemoteEndPoint.Address.ToString()}";
+                    Console.WriteLine(msg);
+                    ServerLog.LogError(msg, "SERVER_ERROR", MessageType.SERVER_ERROR);
                     Send404(context.Response);
                     return;
                 }
 
                 string httpActionName = context.Request.Url.AbsolutePath;
+                httpActionName = httpActionName
+                    .Substring(httpActionName.IndexOf(httpModuleName) + httpModuleName.Length + 1);
 
-                if (httpActionName[httpActionName.Length - 1] == '/')
-                    httpActionName = httpActionName.Substring(0, httpActionName.Length - 1);
+                if (httpActionName.Contains("/"))
+                    httpActionName.Substring(0, httpActionName.IndexOf("/"));
 
-                httpActionName = httpActionName.Substring(httpActionName.IndexOf(httpModuleName) + httpModuleName.Length + 1);
+                //if (httpActionName[httpActionName.Length - 1] == '/')
+                //    httpActionName = httpActionName.Substring(0, httpActionName.Length - 1);
+
+                //httpActionName = httpActionName.Substring(httpActionName.IndexOf(httpModuleName) + httpModuleName.Length + 1);
 
                 string[] allowedMethods = new string[] { "POST","GET" };
 
@@ -211,8 +232,12 @@ namespace AppServerBase.HttpServer
 
         private HttpServerModule GetModule(string module)
         {
-            foreach (var t in ModuleTypesCache)
+            if (module == null)
+                return null;
+
+            foreach (var k in ModuleTypesCache.Keys)
             {
+                var t = ModuleTypesCache[k];
                 if (t.BaseType.Name != typeof(HttpServerModule).Name)
                     continue;
 
