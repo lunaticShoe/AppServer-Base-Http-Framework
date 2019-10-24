@@ -37,11 +37,26 @@ namespace AppServerBase.HttpServer
                            && t.BaseType == typeof(HttpServerModule)
                            select t);
             
-            ModuleTypesCache = modules.ToDictionary(m =>
-                (m.GetCustomAttributes()
-                    .FirstOrDefault(ca =>
-                        ca.GetType() == typeof(ServerModuleAttribute)
-                        ) as ServerModuleAttribute).GetModuleName());
+            //ModuleTypesCache = modules.ToDictionary(m =>
+            //    (m.GetCustomAttributes()
+            //        .FirstOrDefault(ca =>
+            //            ca.GetType() == typeof(ServerModuleAttribute)
+            //            ) as ServerModuleAttribute).GetModuleName());
+
+            foreach (var module in modules)
+            {
+                var attributes = module.GetCustomAttributes()
+                    .Where(a => a.GetType() == typeof(ServerModuleAttribute));
+
+                foreach (var attr in attributes)
+                {
+                    var a = attr as ServerModuleAttribute;
+                    if (!ModuleTypesCache.ContainsKey(a.GetModuleName()))
+                        ModuleTypesCache.Add(a.GetModuleName(), module);
+                }
+            }
+
+            ModuleTypesCache.OrderByDescending(m => m.Key.Length);
         }
 
         private void SendAllowCORS(HttpListenerResponse Response)
@@ -184,7 +199,7 @@ namespace AppServerBase.HttpServer
                     .Substring(httpActionName.IndexOf(httpModuleName) + httpModuleName.Length + 1);
 
                 if (httpActionName.Contains("/"))
-                    httpActionName.Substring(0, httpActionName.IndexOf("/"));
+                    httpActionName = httpActionName.Substring(0, httpActionName.IndexOf("/"));
 
                 //if (httpActionName[httpActionName.Length - 1] == '/')
                 //    httpActionName = httpActionName.Substring(0, httpActionName.Length - 1);

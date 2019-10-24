@@ -21,7 +21,7 @@ namespace AppServerBase.HttpServer
 
     public abstract class HttpServerModule
     {
-        protected string ModuleName;        
+        protected string ModuleName;
         protected string[] urlParts;
         protected NameValueCollection UrlParams;
         protected string Body;
@@ -56,7 +56,7 @@ namespace AppServerBase.HttpServer
                         new JProperty("Message", "Лицензия не активна"),
                         new JProperty("SymbCode", "INVALID_LICENSE")));
             }
-
+            //var act = GetAction(action);
             GetURLs(action);
             UrlParams = GetUrlParams();
             Body = GetBody(context);
@@ -74,7 +74,7 @@ namespace AppServerBase.HttpServer
                             where (_attr is ServerMethodAttribute)
                             && (_attr as ServerMethodAttribute).URL == action
                             select _attr).FirstOrDefault();
-                               
+
                 if (attr != null)
                 {
                     result = method.Invoke(this, ProcessPrameters(method.GetParameters()));
@@ -87,7 +87,7 @@ namespace AppServerBase.HttpServer
             throw new ServerException(
                 new JObject(
                     new JProperty("Message", "Неверный метод"),
-                    new JProperty("SymbCode", "INVALID_METHOD")));          
+                    new JProperty("SymbCode", "INVALID_METHOD")));
         }
 
         public static object GetDefault(Type type)
@@ -108,7 +108,8 @@ namespace AppServerBase.HttpServer
 
             if (Context.Request.HttpMethod == "POST"
                && Context.Request.ContentType != null
-               && Context.Request.ContentType.Contains("application/json"))
+               && (Context.Request.ContentType.Contains("application/json")
+               || Context.Request.ContentType.Contains("application/x-www-form-urlencoded")))
             {
                 jsonBody = JObject.Parse(Body);
             }
@@ -126,13 +127,31 @@ namespace AppServerBase.HttpServer
                     continue;
                 }
 
-                var valueAttribute = param.GetCustomAttributes().ElementAt(0);
+                var valueAttribute = param.GetCustomAttributes()
+                    .Where(a => a.GetType().BaseType == typeof(ParamAttribute))
+                    .FirstOrDefault();//.ElementAt(0);
+
+                var requiredAttribute = param.GetCustomAttributes()
+                    .Where(a => a.GetType() == typeof(NotRequiredAttribute))
+                    .FirstOrDefault();
+
+                var isNotRequired = requiredAttribute != null;
+
+
                 var paramNotation = valueAttribute.GetType();
                 var paramName = (valueAttribute as ParamAttribute).ParamName;
+
+
 
                 if (paramNotation == typeof(GETParamAttribute)
                     || paramNotation == typeof(POSTParamAttribute))
                 {
+                    if (isNotRequired && UrlParams[paramName] == null)
+                    {
+                        paramValues.Add(GetDefault(param.ParameterType));
+                        continue;
+                    }
+
                     if (UrlParams[paramName] == null)
                         throw new Exception($"Parameter not given: {paramName}");
                     paramValues.Add(UrlParams[paramName]);
@@ -140,19 +159,55 @@ namespace AppServerBase.HttpServer
 
                 if (paramNotation == typeof(JSONParamAttribute))
                 {
+                    if (isNotRequired && !jsonBody.ContainsKey(paramName))
+                    {
+                        paramValues.Add(GetDefault(param.ParameterType));
+                        continue;
+                    }
+
                     if (!jsonBody.ContainsKey(paramName))
                         throw new ServerException(ClientMsg.GetErrorMsgInvalidJSON());
                     paramValues.Add(Convert.ChangeType(jsonBody[paramName].ToString(), param.ParameterType));
                 }
-                if ((paramNotation == typeof(JSONObjectParamAttribute))
-                    || (paramNotation == typeof(JSONArrayParamAttribute)))
+                if ((paramNotation == typeof(JSONObjectParamAttribute)))
                 {
+                    if (isNotRequired && !jsonBody.ContainsKey(paramName))
+                    {
+                        paramValues.Add(null);
+                        continue;
+                    }
+
                     if (!jsonBody.ContainsKey(paramName))
                         throw new ServerException(ClientMsg.GetErrorMsgInvalidJSON());
-                    paramValues.Add(jsonBody[paramName]);
+                    paramValues.Add(jsonBody[paramName] as JObject);
                 }
+                if (paramNotation == typeof(JSONArrayParamAttribute))
+                {
+                    if (isNotRequired && !jsonBody.ContainsKey(paramName))
+                    {
+                        paramValues.Add(null);
+                        continue;
+                    }
+
+                    if (!jsonBody.ContainsKey(paramName))
+                        throw new ServerException(ClientMsg.GetErrorMsgInvalidJSON());
+
+                    var paramType = param.ParameterType;
+
+                    //if (param.ParameterType == typeof(JArray))
+                        paramValues.Add(jsonBody[paramName] as JArray);
+                    //else
+                    //    paramValues.Add((jsonBody[paramName] as JArray).ToObject<paramType>());
+                }
+
                 if (paramNotation == typeof(MultiPartOSPParamAttribute))
                 {
+                    if (isNotRequired && (multipartParams == null || !multipartParams.ContainsKey(paramName)))
+                    {
+                        paramValues.Add(null);
+                        continue;
+                    }
+
                     if (multipartParams == null || !multipartParams.ContainsKey(paramName))
                         throw new Exception($"Parameter not given: {paramName}");
                     if (param.ParameterType.IsArray)
@@ -164,6 +219,12 @@ namespace AppServerBase.HttpServer
                 }
                 if (paramNotation == typeof(MultiPartTextParamAttribute))
                 {
+                    if (isNotRequired  && (multipartParams == null || !multipartParams.ContainsKey(paramName)))
+                    {
+                        paramValues.Add(null);
+                        continue;
+                    }
+
                     if (multipartParams == null || !multipartParams.ContainsKey(paramName))
                         throw new Exception($"Parameter not given: {paramName}");
                     if (param.ParameterType.IsArray)
@@ -179,7 +240,10 @@ namespace AppServerBase.HttpServer
                     var num = (valueAttribute as URLParamAttribute).ParamNumber;
                     if (urlParts.ElementAtOrDefault(num) !=null)
                     {
-                        paramValues.Add(num);
+                        paramValues.Add(
+                            Convert.ChangeType(
+                                urlParts.ElementAtOrDefault(num), 
+                                param.ParameterType));
                     }
                 }
             }
@@ -276,7 +340,7 @@ namespace AppServerBase.HttpServer
         {
             var at = GetType()
                 .GetCustomAttributes()
-                .Where(a => a.GetType() == typeof(HttpServerModule))
+                .Where(a => a.GetType() == typeof(ServerModuleAttribute))
                 .FirstOrDefault();
 
             return (at as ServerModuleAttribute)?.GetModuleName();         
@@ -284,10 +348,11 @@ namespace AppServerBase.HttpServer
 
         protected void GetURLs(string actionName)
         {
-            var url = GetModuleName() + "/" + actionName;
+            var url = "/" + GetModuleName() + "/" + actionName;
             var path = Context.Request.Url.AbsolutePath;
             url = path.Substring(url.Length);
             urlParts = url.Split('/');
+            urlParts = urlParts.Where(item => item != "").ToArray();
         }
 
         protected NameValueCollection GetUrlParams()
@@ -306,9 +371,14 @@ namespace AppServerBase.HttpServer
                 }
             }
             return null;
-        }     
-        
+        }
 
+        protected virtual string GetAction(string action)
+        {
+            //urlParts = action.Split('/');
+            return action; //urlParts[0];
+        }
+        
         protected SessionBase ValidateSession(string body)
         {
             string token = "";

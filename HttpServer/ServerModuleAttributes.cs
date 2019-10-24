@@ -55,6 +55,16 @@ namespace AppServerBase.HttpServer
             this.ParamName = ParamName;
         }
     }
+    [AttributeUsage(AttributeTargets.Parameter,
+                   AllowMultiple = false)
+  ]
+    public class NotRequiredAttribute : Attribute
+    {
+        public NotRequiredAttribute()
+        {
+
+        }
+    }
           
     /// <summary>
     /// Обозначить параметр как GET-параметр
