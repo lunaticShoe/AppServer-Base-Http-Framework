@@ -126,7 +126,7 @@ namespace AppServerBase.HttpServer
             CheckSessionDelegate = checkSession;
         }
 
-        public void Start(string[] address)
+        public void Start(params string[] address)
         {
             foreach (var addr in address)            
                 Listener.Prefixes.Add(addr);
