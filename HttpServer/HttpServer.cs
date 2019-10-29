@@ -65,6 +65,7 @@ namespace AppServerBase.HttpServer
             {
                 Response.StatusCode = 200;
                 Response.Headers.Add("Access-Control-Allow-Origin", "*");
+                Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type");
                 Response.OutputStream.Close();
                 Response.OutputStream.Dispose();
             }

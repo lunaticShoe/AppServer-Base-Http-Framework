@@ -109,6 +109,7 @@ namespace AppServerBase.HttpServer
             if (Context.Request.HttpMethod == "POST"
                && Context.Request.ContentType != null
                && (Context.Request.ContentType.Contains("application/json")
+               || Context.Request.ContentType.Contains("text/plain")
                || Context.Request.ContentType.Contains("application/x-www-form-urlencoded")))
             {
                 jsonBody = JObject.Parse(Body);
