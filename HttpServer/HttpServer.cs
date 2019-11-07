@@ -1,5 +1,4 @@
-﻿using AppServerBase.Auth;
-using AppServerBase.Utils;
+﻿using AppServerBase.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -19,7 +18,7 @@ namespace AppServerBase.HttpServer
 
 
         private Func<bool> CheckLicenseDelegate;
-        private Func<string, SessionBase> CheckSessionDelegate;
+     //   private Func<string, SessionBase> CheckSessionDelegate;
 
         public HTTPServer()
         {
@@ -122,10 +121,10 @@ namespace AppServerBase.HttpServer
             CheckLicenseDelegate = checkLicense;
         }
 
-        public void SetCheckSessionMethod(Func<string, SessionBase> checkSession)
-        {
-            CheckSessionDelegate = checkSession;
-        }
+        //public void SetCheckSessionMethod(Func<string, SessionBase> checkSession)
+        //{
+        //    CheckSessionDelegate = checkSession;
+        //}
 
         public void Start(params string[] address)
         {
@@ -264,7 +263,7 @@ namespace AppServerBase.HttpServer
                     {
                         var serverModule = Activator.CreateInstance(t) as HttpServerModule;
                         serverModule.SetCheckLicenseMethod(CheckLicenseDelegate);
-                        serverModule.SetCheckSessionMethod(CheckSessionDelegate);
+                       // serverModule.SetCheckSessionMethod(CheckSessionDelegate);
                         return serverModule;
                     }
             }

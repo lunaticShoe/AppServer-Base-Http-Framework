@@ -1,5 +1,4 @@
-﻿using AppServerBase.Auth;
-using HttpMultipartParser;
+﻿using HttpMultipartParser;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -27,8 +26,10 @@ namespace AppServerBase.HttpServer
         protected string Body;
         protected HttpListenerContext Context;
 
+
+
         private Func<bool> CheckLicenseDelegate;
-        private Func<string, SessionBase> CheckSessionDelegate;
+      //  private Func<string, SessionBase> CheckSessionDelegate;
 
 
         public HttpServerModule()
@@ -324,10 +325,10 @@ namespace AppServerBase.HttpServer
             CheckLicenseDelegate = checkLicense;
         }
 
-        public void SetCheckSessionMethod(Func<string,SessionBase> checkSession)
-        {
-            CheckSessionDelegate = checkSession;
-        }
+        //public void SetCheckSessionMethod(Func<string,SessionBase> checkSession)
+        //{
+        //    CheckSessionDelegate = checkSession;
+        //}
 
 
         public HttpServerModule(string moduleName)
@@ -380,23 +381,23 @@ namespace AppServerBase.HttpServer
             return action; //urlParts[0];
         }
         
-        protected SessionBase ValidateSession(string body)
-        {
-            string token = "";
-            try
-            {
-                JObject json = JObject.Parse(body);
-                token = json["token"].ToString();
-            }
-            catch
-            {
-                throw new ServerException(ClientMsg.GetErrorMsgInvalidJSON().ToString());
-            }
+        //protected SessionBase ValidateSession(string body)
+        //{
+        //    string token = "";
+        //    try
+        //    {
+        //        JObject json = JObject.Parse(body);
+        //        token = json["token"].ToString();
+        //    }
+        //    catch
+        //    {
+        //        throw new ServerException(ClientMsg.GetErrorMsgInvalidJSON().ToString());
+        //    }
 
-            if (CheckSessionDelegate != null)
-                return CheckSessionDelegate.Invoke(token);
+        //    if (CheckSessionDelegate != null)
+        //        return CheckSessionDelegate.Invoke(token);
 
-            return null; // SessionCache.GetValidSession(token);            
-        }
+        //    return null; // SessionCache.GetValidSession(token);            
+        //}
     }
 }
