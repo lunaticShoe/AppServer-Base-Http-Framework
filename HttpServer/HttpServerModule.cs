@@ -112,7 +112,14 @@ namespace AppServerBase.HttpServer
                || Context.Request.ContentType.Contains("text/plain")
                || Context.Request.ContentType.Contains("application/x-www-form-urlencoded")))
             {
-                jsonBody = JObject.Parse(Body);
+                try
+                {
+                    jsonBody = JObject.Parse(Body);
+                }
+                catch
+                {
+                    jsonBody = new JObject();
+                }
             }
 
             //if (!Context.Request.ContentType.Contains("application/json"))

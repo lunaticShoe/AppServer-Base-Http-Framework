@@ -16,6 +16,22 @@ namespace AppServerBase.HttpServer
         {
 
         }
+
+        private static string GetMessage(string message, string code)
+        {
+            var msg = new JObject
+            {
+                { "Message", message },
+                { "SymbCode", code }
+            };
+            return msg.ToString();
+        }
+
+        public ServerException(string message, string code) 
+            : base(GetMessage(message, code))
+        {
+            
+        }
     }
 
 }
