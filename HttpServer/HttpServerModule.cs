@@ -111,6 +111,7 @@ namespace AppServerBase.HttpServer
                && Context.Request.ContentType != null
                && (Context.Request.ContentType.Contains("application/json")
                || Context.Request.ContentType.Contains("text/plain")
+               || Context.Request.ContentType.Contains("text/json")
                || Context.Request.ContentType.Contains("application/x-www-form-urlencoded")))
             {
                 try
