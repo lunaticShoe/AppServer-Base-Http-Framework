@@ -11,7 +11,7 @@ using AppServerBase.HttpServer;
 using System;
 using System.Threading;
 
-namespace SNMPAgent
+namespace Server
 {
     class Program
     {
@@ -31,7 +31,7 @@ To have API called you also need to create a module.
 using AppServerBase.HttpServer;
 using Newtonsoft.Json.Linq;
 
-namespace SNMPAgent.Statistics
+namespace Server
 {
     [ServerModule("statistics")]
     class StatisticsModule : HttpServerModule
