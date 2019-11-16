@@ -9,9 +9,9 @@ namespace AppServerBase.HttpServer
 
     public class ServerModuleResponse
     {
-        private string StrRes = null;
-        private Stream StreamRes = null;
-        private string f_name = null;
+        private readonly string StrRes = null;
+        private readonly Stream StreamRes = null;
+        private readonly string f_name = null;
 
 
         public ServerModuleResponse(string response)
@@ -30,98 +30,75 @@ namespace AppServerBase.HttpServer
 
         private void SetJsonResponse(HttpListenerContext context, string JsonResponse)
         {
+            var response = context.Response;
             try
-            {
-                context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
-
-
-                context.Response.ContentType = "application/json; charset=utf-8";
+            {                
+                response.Headers.Add("Access-Control-Allow-Origin", "*");
+                response.ContentType = "application/json; charset=utf-8";
                 byte[] buffer = Encoding.UTF8.GetBytes(JsonResponse);
-                context.Response.StatusCode = 200;
+                response.StatusCode = 200;
 
-                context.Response.ContentLength64 = buffer.LongLength;
-                context.Response.OutputStream.Write(buffer, 0, buffer.Length);
-                // context.Response.OutputStream.wr
-
-
-                context.Response.OutputStream.Close();
-                context.Response.OutputStream.Dispose();
+                response.ContentLength64 = buffer.LongLength;
+                response.OutputStream.Write(buffer, 0, buffer.Length);      
             }
             catch
             {
 
             }
-
-        }
-
-
-        private byte[] ReadFully(Stream input)
-        {
-            byte[] buffer = new byte[input.Length];
-            using (MemoryStream ms = new MemoryStream())
+            finally
             {
-                int read;
-                while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
-                {
-                    ms.Write(buffer, 0, read);
-                }
-                return ms.ToArray();
+                response.OutputStream.Close();
+                response.OutputStream.Dispose();
             }
-        }
 
-        private bool IsFireFox(string userAgent)
-        {
-            try
-            {
-                string browser = userAgent.Substring(
-                    userAgent.LastIndexOf(" ") + 1,
-                    (userAgent.LastIndexOf("/") - 1) - userAgent.LastIndexOf(" ")
-                );
-
-                return (browser.CompareTo("Firefox") == 0);
-            }
-            catch (Exception ex)
-            {
-                return false;
-            }
         }
 
         private void SetStreamResponse(HttpListenerContext context, Stream StreamResponse)
         {
-
+            var response = context.Response;
             try
             {
                 Console.WriteLine("File response. Filename = " + f_name);
                 StreamResponse.Position = 0;
                 byte[] buffer = ReadFully(StreamResponse);
 
-                context.Response.Headers.Add("Content-Type", "application/octet-stream;   charset=utf-8");
-                context.Response.Headers.Add("Content-Type", "binary;   charset=utf-8");
-                context.Response.Headers.Add("Content-Type", "application/x-download");
+                response.Headers.Add("Content-Type", "application/octet-stream; charset=utf-8");
+                response.Headers.Add("Content-Type", "binary; charset=utf-8");
+                response.Headers.Add("Content-Type", "application/x-download");
 
                 Console.WriteLine("Common headers set!");
                 if ((context.Request.HttpMethod == "GET")
                     && (f_name != null) && (f_name != ""))
-                    {
+                {
 
-                        if (IsFireFox(context.Request.UserAgent))
-                            context.Response.AddHeader("Content-Disposition", "attachment; filename*=\"utf8'ru-ru'" + Uri.EscapeDataString(f_name) + "\"");
-                        else
-                            context.Response.AddHeader("Content-Disposition", "attachment; filename=" + Uri.EscapeDataString(f_name));
-                    }
+                    if (IsFirefox(context.Request.UserAgent))
+                        response.AddHeader(
+                            "Content-Disposition", 
+                            "attachment; filename*=\"utf8'ru-ru'" 
+                            + Uri.EscapeDataString(f_name) + "\"");
+                    else
+                        response.AddHeader(
+                            "Content-Disposition", 
+                            "attachment; filename=" 
+                            + Uri.EscapeDataString(f_name));
+                }
 
-                context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
-                context.Response.ContentLength64 = buffer.Length;
+                response.Headers.Add("Access-Control-Allow-Origin", "*");
+                response.ContentLength64 = buffer.Length;
 
-                context.Response.StatusCode = 200;
-                context.Response.OutputStream.Write(buffer, 0, buffer.Length);
-
-                context.Response.OutputStream.Close();
-                context.Response.OutputStream.Dispose();
+                response.StatusCode = 200;
+                response.OutputStream.Write(buffer, 0, buffer.Length);                
             } 
             catch
             {
 
+            }
+            finally
+            {
+                StreamResponse.Close();
+                StreamResponse.Dispose();
+                response.OutputStream.Close();
+                response.OutputStream.Dispose();
             }
         }
 
@@ -138,6 +115,36 @@ namespace AppServerBase.HttpServer
             {
                 SetStreamResponse(context, StreamRes);
                 return;
+            }
+        }
+
+        private byte[] ReadFully(Stream input)
+        {
+            byte[] buffer = new byte[input.Length];
+            using (MemoryStream ms = new MemoryStream())
+            {
+                int read;
+                while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    ms.Write(buffer, 0, read);
+                }
+                return ms.ToArray();
+            }
+        }
+
+        private bool IsFirefox(string userAgent)
+        {
+            try
+            {
+                string browser = userAgent.Substring(
+                    userAgent.LastIndexOf(" ") + 1,
+                    userAgent.LastIndexOf("/") - 1 - userAgent.LastIndexOf(" ")
+                );
+                return browser.Contains("Firefox");
+            }
+            catch
+            {
+                return false;
             }
         }
     }
