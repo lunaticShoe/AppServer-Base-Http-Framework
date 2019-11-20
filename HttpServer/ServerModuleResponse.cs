@@ -9,7 +9,7 @@ namespace AppServerBase.HttpServer
 
     public class ServerModuleResponse
     {
-        private readonly string StrRes = null;
+        protected readonly string StrRes = null;
         private readonly Stream StreamRes = null;
         private readonly string f_name = null;
 
@@ -102,7 +102,7 @@ namespace AppServerBase.HttpServer
             }
         }
 
-        public void Response(HttpListenerContext context)
+        public virtual void Response(HttpListenerContext context)
         {
 
             if (StrRes != null)

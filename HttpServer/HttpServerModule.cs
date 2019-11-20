@@ -107,12 +107,14 @@ namespace AppServerBase.HttpServer
 
             JObject jsonBody = null;
 
+            string ContentType = Context.Request.ContentType;
+            
             if (Context.Request.HttpMethod == "POST"
-               && Context.Request.ContentType != null
-               && (Context.Request.ContentType.Contains("application/json")
-               || Context.Request.ContentType.Contains("text/plain")
-               || Context.Request.ContentType.Contains("text/json")
-               || Context.Request.ContentType.Contains("application/x-www-form-urlencoded")))
+               && ContentType != null
+               && (ContentType.Contains("application/json")
+               || ContentType.Contains("text/plain")
+               || ContentType.Contains("text/json")
+               || ContentType.Contains("application/x-www-form-urlencoded")))
             {
                 try
                 {
