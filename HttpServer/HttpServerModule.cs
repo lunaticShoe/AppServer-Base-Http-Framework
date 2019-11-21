@@ -7,7 +7,9 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace AppServerBase.HttpServer
 {
@@ -78,7 +80,28 @@ namespace AppServerBase.HttpServer
 
                 if (attr != null)
                 {
-                    result = method.Invoke(this, ProcessPrameters(method.GetParameters()));
+                    if (IsAsync(method,attributes))
+                    {
+                        dynamic asyncResult = null;
+
+                        if (method.ReturnType == typeof(ServerModuleResponse))
+                            asyncResult = (Task<ServerModuleResponse>) method
+                                .Invoke(this, 
+                                    ProcessPrameters(method.GetParameters()));
+
+                        if (method.ReturnType == typeof(JObject))
+                            asyncResult = (Task<ServerModuleResponse>) method
+                                .Invoke(this, 
+                                    ProcessPrameters(method.GetParameters()));
+
+                        asyncResult?.Wait();
+                        result = asyncResult?.Result;
+                    }
+                    else
+                    {
+                        result = method.Invoke(this, ProcessPrameters(method.GetParameters()));
+                    }
+
                     SetResult(result);
                     return result as ServerModuleResponse;
                 }
@@ -89,6 +112,15 @@ namespace AppServerBase.HttpServer
                 new JObject(
                     new JProperty("Message", "Неверный метод"),
                     new JProperty("SymbCode", "INVALID_METHOD")));
+        }
+
+        private bool IsAsync(MethodInfo methodInfo, object[] attributes)
+        {
+            var attr = (from _attr in attributes
+                        where (_attr is AsyncStateMachineAttribute)
+                        select _attr).FirstOrDefault();
+
+            return attr != null;
         }
 
         public static object GetDefault(Type type)
@@ -166,7 +198,10 @@ namespace AppServerBase.HttpServer
 
                     if (UrlParams[paramName] == null)
                         throw new Exception($"Parameter not given: {paramName}");
-                    paramValues.Add(UrlParams[paramName]);
+                    paramValues.Add(
+                        Convert.ChangeType(
+                            UrlParams[paramName], 
+                            param.ParameterType));
                 }
 
                 if (paramNotation == typeof(JSONParamAttribute))
@@ -179,7 +214,10 @@ namespace AppServerBase.HttpServer
 
                     if (!jsonBody.ContainsKey(paramName))
                         throw new ServerException(ClientMsg.GetErrorMsgInvalidJSON());
-                    paramValues.Add(Convert.ChangeType(jsonBody[paramName].ToString(), param.ParameterType));
+                    paramValues.Add(
+                        Convert.ChangeType(
+                            jsonBody[paramName].ToString(), 
+                            param.ParameterType));
                 }
                 if ((paramNotation == typeof(JSONObjectParamAttribute)))
                 {

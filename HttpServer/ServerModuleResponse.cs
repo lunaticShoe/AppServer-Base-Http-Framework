@@ -12,45 +12,51 @@ namespace AppServerBase.HttpServer
         protected readonly string StrRes = null;
         private readonly Stream StreamRes = null;
         private readonly string f_name = null;
+        private readonly string ContentType;
 
-
-        public ServerModuleResponse(string response)
-        {
+        public ServerModuleResponse(string response) => 
             StrRes = response;
-        }
-        public ServerModuleResponse(JObject responce)
-        {
-            StrRes = responce.ToString();
-        }
+
+        public ServerModuleResponse(string response, string contentType) =>
+            (StrRes, ContentType) = (response, contentType);
+
+        public ServerModuleResponse(JObject responce) =>
+             StrRes = responce.ToString();
+        
         public ServerModuleResponse(Stream responce, string filename)
         {
             f_name = filename;
+
+            f_name = f_name.Replace(":", " ")
+                .Replace("/", " ")
+                .Replace("\\", " ")
+                .Replace("*", " ")
+                .Replace("?", " ")
+                .Replace("\"", " ")
+                .Replace("|", " ")
+                .Replace("<", " ")
+                .Replace(">", " ");
+
             StreamRes = responce;
         }
 
         private void SetJsonResponse(HttpListenerContext context, string JsonResponse)
         {
-            var response = context.Response;
-            try
-            {                
+            using (var response = context.Response)
+            {
                 response.Headers.Add("Access-Control-Allow-Origin", "*");
-                response.ContentType = "application/json; charset=utf-8";
+
+                if (ContentType != null)
+                    response.ContentType = $"{ContentType}; charset=utf-8";
+                else
+                    response.ContentType = "application/json; charset=utf-8";
+
                 byte[] buffer = Encoding.UTF8.GetBytes(JsonResponse);
                 response.StatusCode = 200;
 
                 response.ContentLength64 = buffer.LongLength;
-                response.OutputStream.Write(buffer, 0, buffer.Length);      
+                response.OutputStream.Write(buffer, 0, buffer.Length);
             }
-            catch
-            {
-
-            }
-            finally
-            {
-                response.OutputStream.Close();
-                response.OutputStream.Dispose();
-            }
-
         }
 
         private void SetStreamResponse(HttpListenerContext context, Stream StreamResponse)
