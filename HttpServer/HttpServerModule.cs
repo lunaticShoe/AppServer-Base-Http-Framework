@@ -82,20 +82,21 @@ namespace AppServerBase.HttpServer
                 {
                     if (IsAsync(method,attributes))
                     {
-                        dynamic asyncResult = null;
-
                         if (method.ReturnType == typeof(ServerModuleResponse))
-                            asyncResult = (Task<ServerModuleResponse>) method
-                                .Invoke(this, 
+                        {
+                            var asyncResult = (Task<ServerModuleResponse>)method.Invoke(this,
                                     ProcessPrameters(method.GetParameters()));
+                            asyncResult.Wait();
+                            result = asyncResult.Result;
+                        }
 
                         if (method.ReturnType == typeof(JObject))
-                            asyncResult = (Task<ServerModuleResponse>) method
-                                .Invoke(this, 
-                                    ProcessPrameters(method.GetParameters()));
-
-                        asyncResult?.Wait();
-                        result = asyncResult?.Result;
+                        {
+                            var asyncResult = (Task<ServerModuleResponse>)method
+                                .Invoke(this, ProcessPrameters(method.GetParameters()));
+                            asyncResult.Wait();
+                            result = asyncResult.Result;
+                        }
                     }
                     else
                     {
