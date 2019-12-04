@@ -82,7 +82,7 @@ namespace AppServerBase.HttpServer
                 {
                     if (IsAsync(method,attributes))
                     {
-                        if (method.ReturnType == typeof(ServerModuleResponse))
+                        if (method.ReturnType == typeof(Task<ServerModuleResponse>))
                         {
                             var asyncResult = (Task<ServerModuleResponse>)method.Invoke(this,
                                     ProcessPrameters(method.GetParameters()));
@@ -90,9 +90,9 @@ namespace AppServerBase.HttpServer
                             result = asyncResult.Result;
                         }
 
-                        if (method.ReturnType == typeof(JObject))
+                        if (method.ReturnType == typeof(Task<JObject>))
                         {
-                            var asyncResult = (Task<ServerModuleResponse>)method
+                            var asyncResult = (Task<JObject>)method
                                 .Invoke(this, ProcessPrameters(method.GetParameters()));
                             asyncResult.Wait();
                             result = asyncResult.Result;
