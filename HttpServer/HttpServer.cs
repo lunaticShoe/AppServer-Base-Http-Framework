@@ -112,7 +112,7 @@ namespace AppServerBase.HttpServer
                     $"\nError stack : {ex.StackTrace}";
 
 
-                ServerLog.LogError(error_message_text, "SERVER_ERROR", MessageType.SERVER_ERROR);
+                ServerLog.LogError(error_message_text);
             }
         }
 
@@ -189,7 +189,7 @@ namespace AppServerBase.HttpServer
                         $"\n{context.Request.UserAgent}" +
                         $"\n{context.Request.RemoteEndPoint.Address.ToString()}";
                     Console.WriteLine(msg);
-                    ServerLog.LogError(msg, "SERVER_ERROR", MessageType.SERVER_ERROR);
+                    ServerLog.LogError(msg);
                     Send404(context.Response);
                     return;
                 }
@@ -289,7 +289,7 @@ namespace AppServerBase.HttpServer
                 $"\nBody : \n{body}" +
                 $"\nError stack : {ex.StackTrace}";
 
-            ServerLog.LogError(error_message_text_log, "SERVER_ERROR", MessageType.SERVER_ERROR);
+            ServerLog.LogError(error_message_text_log);
 
             Console.WriteLine(error_message_text_log);
             if (ex is ServerException)            
