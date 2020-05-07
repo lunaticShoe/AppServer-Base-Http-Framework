@@ -43,11 +43,14 @@ namespace AppServerBase.Utils
                 }
                 t = Nullable.GetUnderlyingType(t);
             }
+            if (t.IsEnum)
+                return Enum.ToObject(t, Convert.ToInt32(value));
             return Convert.ChangeType(value, t);
         }
 
-        public IEnumerable<T> GetObjects<T>()
+        public List<T> GetObjects<T>()
         {
+            List<T> objects = new List<T>();
             var props = typeof(T).GetProperties();
             foreach (DataRow row in Rows)
             {
@@ -72,9 +75,10 @@ namespace AppServerBase.Utils
                     //Convert.ChangeType(row[column],prop.PropertyType)
                     prop.SetValue(item, ChangeType(row[column], prop.PropertyType));    
                 }
-
-                yield return item;
+                objects.Add(item);
+                //yield return item;
             }
+            return objects;
         }
 
         public JArray GetJSONObjectArray<T>()
@@ -101,5 +105,28 @@ namespace AppServerBase.Utils
             }
             return true;
         }
+        
+        public void Assign(DataTable dataTable)
+        {
+            Clear();
+
+            foreach (DataColumn column in  dataTable.Columns)
+            {
+                this.Columns.Add(new DataColumn(column.ColumnName, column.DataType));
+            }
+
+            foreach (DataRow row in dataTable.Rows)
+            {
+                var newRow = NewRow();
+
+                foreach (DataColumn column in dataTable.Columns)
+                {
+                    newRow[column.ColumnName] = row[column.ColumnName];
+                }
+
+                Rows.Add(newRow);
+            }
+        }
+        
     }
 }

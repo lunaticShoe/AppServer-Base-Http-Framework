@@ -238,6 +238,10 @@ namespace AppServerBase.HttpServer
             {
                 HandleException(tie.InnerException, context);
             }
+            catch (AggregateException ex)
+            {
+                HandleException(ex.InnerException, context);
+            }
             catch (Exception ex)
             {
                 HandleException(ex,context);

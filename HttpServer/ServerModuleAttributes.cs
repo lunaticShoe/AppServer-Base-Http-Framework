@@ -46,14 +46,14 @@ namespace AppServerBase.HttpServer
         }
     }
 
-    public class ParamAttribute : Attribute
+    public abstract class ParamAttribute : Attribute
     {
         public string ParamName { get; protected set; }
 
         public ParamAttribute(string ParamName)
-        {
-            this.ParamName = ParamName;
-        }
+            => this.ParamName = ParamName;        
+
+
     }
     [AttributeUsage(AttributeTargets.Parameter,
                    AllowMultiple = false)
@@ -124,9 +124,15 @@ namespace AppServerBase.HttpServer
     ]
     public class JSONArrayParamAttribute : ParamAttribute
     {
-        public JSONArrayParamAttribute(string ParamName) : base(ParamName)
+        private readonly Type ParamType;
+
+        public JSONArrayParamAttribute(string ParamName) 
+            : base(ParamName)
         {
         }
+
+        public JSONArrayParamAttribute(string ParamName, Type paramType)
+            : this(ParamName) => ParamType = paramType;
     }
 
     [AttributeUsage(AttributeTargets.Parameter,
