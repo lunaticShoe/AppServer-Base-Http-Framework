@@ -1,7 +1,29 @@
-﻿using System;
+﻿using AppServerBase.Utils;
+using Newtonsoft.Json.Linq;
+using System;
+using System.Collections.Specialized;
+using System.Linq;
+using System.Reflection;
 
 namespace AppServerBase.HttpServer
 {
+
+    interface IJsonParam
+    {
+        object ResolveParam(ParameterInfo param, JObject json, bool isNotRequired);
+    }
+
+    interface IHttpParam
+    {
+        object ResolveParam(ParameterInfo param, object paramValue, bool isNotRequired);
+    }
+
+    interface IURLParam
+    {
+        object ResolveParam(ParameterInfo param, string[] urlParts);
+    }
+
+
     /// <summary>
     /// Обозначить метод
     /// </summary>
@@ -53,7 +75,6 @@ namespace AppServerBase.HttpServer
         public ParamAttribute(string ParamName)
             => this.ParamName = ParamName;        
 
-
     }
     [AttributeUsage(AttributeTargets.Parameter,
                    AllowMultiple = false)
@@ -72,10 +93,23 @@ namespace AppServerBase.HttpServer
     [AttributeUsage(AttributeTargets.Parameter,
                      AllowMultiple = false)
     ]
-    public class GETParamAttribute : ParamAttribute
+    public class GETParamAttribute : ParamAttribute, IHttpParam
     {
         public GETParamAttribute(string ParamName) : base(ParamName)
         {
+        }
+
+        public object ResolveParam(ParameterInfo param, object paramValue, bool isNotRequired)
+        {
+            if (isNotRequired && paramValue == null)
+            {
+                return ObjectUtils.GetDefault(param.ParameterType);
+            }
+
+            if (paramValue == null)
+                throw new Exception($"Parameter not given: {ParamName}");
+
+            return Convert.ChangeType(paramValue,param.ParameterType);
         }
     }
     /// <summary>
@@ -84,10 +118,23 @@ namespace AppServerBase.HttpServer
     [AttributeUsage(AttributeTargets.Parameter,
                      AllowMultiple = false)
     ]
-    public class POSTParamAttribute : ParamAttribute
+    public class POSTParamAttribute : ParamAttribute, IHttpParam
     {
         public POSTParamAttribute(string ParamName) : base(ParamName)
         {
+        }
+
+        public object ResolveParam(ParameterInfo param, object paramValue, bool isNotRequired)
+        {
+            if (isNotRequired && paramValue == null)
+            {
+                return ObjectUtils.GetDefault(param.ParameterType);
+            }
+
+            if (paramValue == null)
+                throw new Exception($"Parameter not given: {ParamName}");
+
+            return Convert.ChangeType(paramValue, param.ParameterType);
         }
     }
     /// <summary>
@@ -96,10 +143,24 @@ namespace AppServerBase.HttpServer
     [AttributeUsage(AttributeTargets.Parameter,
                      AllowMultiple = false)
     ]
-    public class JSONParamAttribute : ParamAttribute
+    public class JSONParamAttribute : ParamAttribute, IJsonParam
     {
         public JSONParamAttribute(string ParamName) : base(ParamName)
         {
+        }
+
+        public object ResolveParam(ParameterInfo param, JObject json, bool isNotRequired)
+        {
+            if (isNotRequired && !json.ContainsKey(ParamName))
+            {
+                return ObjectUtils.GetDefault(param.ParameterType);                
+            }
+
+            if (!json.ContainsKey(ParamName))
+                throw new ServerException(ClientMsg.GetErrorMsgInvalidJSON());
+            return Convert.ChangeType(
+                    json[ParamName].ToString(),
+                    param.ParameterType);
         }
     }
 
@@ -109,10 +170,22 @@ namespace AppServerBase.HttpServer
     [AttributeUsage(AttributeTargets.Parameter,
                      AllowMultiple = false)
     ]
-    public class JSONObjectParamAttribute : ParamAttribute
+    public class JSONObjectParamAttribute : ParamAttribute, IJsonParam
     {
         public JSONObjectParamAttribute(string ParamName) : base(ParamName)
         {
+        }
+
+        public object ResolveParam(ParameterInfo param, JObject json, bool isNotRequired)
+        {
+            if (isNotRequired && !json.ContainsKey(ParamName))
+            {
+                return null;
+            }
+
+            if (!json.ContainsKey(ParamName))
+                throw new ServerException(ClientMsg.GetErrorMsgInvalidJSON());
+            return json[ParamName];
         }
     }
 
@@ -122,7 +195,7 @@ namespace AppServerBase.HttpServer
     [AttributeUsage(AttributeTargets.Parameter,
                      AllowMultiple = false)
     ]
-    public class JSONArrayParamAttribute : ParamAttribute
+    public class JSONArrayParamAttribute : ParamAttribute, IJsonParam
     {
         private readonly Type ParamType;
 
@@ -133,6 +206,18 @@ namespace AppServerBase.HttpServer
 
         public JSONArrayParamAttribute(string ParamName, Type paramType)
             : this(ParamName) => ParamType = paramType;
+
+        public object ResolveParam(ParameterInfo param, JObject json, bool isNotRequired)
+        {
+            if (isNotRequired && !json.ContainsKey(ParamName))
+            {
+                return null;
+            }
+
+            if (!json.ContainsKey(ParamName))
+                throw new ServerException(ClientMsg.GetErrorMsgInvalidJSON());
+            return json[ParamName];
+        }
     }
 
     [AttributeUsage(AttributeTargets.Parameter,
@@ -158,12 +243,23 @@ namespace AppServerBase.HttpServer
     [AttributeUsage(AttributeTargets.Parameter,
              AllowMultiple = false)
 ]
-    public class URLParamAttribute : ParamAttribute
+    public class URLParamAttribute : ParamAttribute, IURLParam
     {
         public int ParamNumber { get; private set; }
         public URLParamAttribute(int ParamNumber) : base("")
         {
             this.ParamNumber = ParamNumber;
+        }
+
+        public object ResolveParam(ParameterInfo param, string[] urlParts)
+        {            
+            if (urlParts.ElementAtOrDefault(ParamNumber) != null)
+            {
+                return Convert.ChangeType(
+                        urlParts.ElementAtOrDefault(ParamNumber),
+                        param.ParameterType);
+            }
+            return null;
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using HttpMultipartParser;
+﻿using AppServerBase.HttpServer.ParamResolver;
+using HttpMultipartParser;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -182,121 +183,11 @@ namespace AppServerBase.HttpServer
 
                 var isNotRequired = requiredAttribute != null;
 
+                var resolver = ParamResolverFactory.Create(valueAttribute as ParamAttribute, 
+                    param.ParameterType, multipartParams, UrlParams, jsonBody, urlParts, 
+                    isNotRequired);
 
-                var paramNotation = valueAttribute.GetType();
-                var paramName = (valueAttribute as ParamAttribute).ParamName;
-
-
-
-                if (paramNotation == typeof(GETParamAttribute)
-                    || paramNotation == typeof(POSTParamAttribute))
-                {
-                    if (isNotRequired && UrlParams[paramName] == null)
-                    {
-                        paramValues.Add(GetDefault(param.ParameterType));
-                        continue;
-                    }
-
-                    if (UrlParams[paramName] == null)
-                        throw new Exception($"Parameter not given: {paramName}");
-                    paramValues.Add(
-                        Convert.ChangeType(
-                            UrlParams[paramName], 
-                            param.ParameterType));
-                }
-
-                if (paramNotation == typeof(JSONParamAttribute))
-                {
-                    if (isNotRequired && !jsonBody.ContainsKey(paramName))
-                    {
-                        paramValues.Add(GetDefault(param.ParameterType));
-                        continue;
-                    }
-
-                    if (!jsonBody.ContainsKey(paramName))
-                        throw new ServerException(ClientMsg.GetErrorMsgInvalidJSON());
-                    paramValues.Add(
-                        Convert.ChangeType(
-                            jsonBody[paramName].ToString(), 
-                            param.ParameterType));
-                }
-                if ((paramNotation == typeof(JSONObjectParamAttribute)))
-                {
-                    if (isNotRequired && !jsonBody.ContainsKey(paramName))
-                    {
-                        paramValues.Add(null);
-                        continue;
-                    }
-
-                    if (!jsonBody.ContainsKey(paramName))
-                        throw new ServerException(ClientMsg.GetErrorMsgInvalidJSON());
-                    paramValues.Add(jsonBody[paramName] as JObject);
-                }
-                if (paramNotation == typeof(JSONArrayParamAttribute))
-                {
-                    if (isNotRequired && !jsonBody.ContainsKey(paramName))
-                    {
-                        paramValues.Add(null);
-                        continue;
-                    }
-
-                    if (!jsonBody.ContainsKey(paramName))
-                        throw new ServerException(ClientMsg.GetErrorMsgInvalidJSON());
-
-                    var paramType = param.ParameterType;
-
-                    //if (param.ParameterType == typeof(JArray))
-                        paramValues.Add(jsonBody[paramName] as JArray);
-                    //else
-                    //    paramValues.Add((jsonBody[paramName] as JArray).ToObject<paramType>());
-                }
-
-                if (paramNotation == typeof(MultiPartOSPParamAttribute))
-                {
-                    if (isNotRequired && (multipartParams == null || !multipartParams.ContainsKey(paramName)))
-                    {
-                        paramValues.Add(null);
-                        continue;
-                    }
-
-                    if (multipartParams == null || !multipartParams.ContainsKey(paramName))
-                        throw new Exception($"Parameter not given: {paramName}");
-                    if (param.ParameterType.IsArray)
-                        paramValues.Add((multipartParams[paramName] as List<MultipartData>).ToArray());
-                    else
-                        paramValues.Add(
-                            (multipartParams[paramName] as List<MultipartData>)
-                            .FirstOrDefault());
-                }
-                if (paramNotation == typeof(MultiPartTextParamAttribute))
-                {
-                    if (isNotRequired  && (multipartParams == null || !multipartParams.ContainsKey(paramName)))
-                    {
-                        paramValues.Add(null);
-                        continue;
-                    }
-
-                    if (multipartParams == null || !multipartParams.ContainsKey(paramName))
-                        throw new Exception($"Parameter not given: {paramName}");
-                    if (param.ParameterType.IsArray)
-                        paramValues.Add((multipartParams[paramName] as List<MultipartData>)
-                            .Select(md=> md.Data).ToArray());
-                    else
-                        paramValues.Add(
-                            (multipartParams[paramName] as List<MultipartData>)
-                            .FirstOrDefault()?.Data);
-                }
-                if (paramNotation == typeof(URLParamAttribute))
-                {
-                    var num = (valueAttribute as URLParamAttribute).ParamNumber;
-                    if (urlParts.ElementAtOrDefault(num) !=null)
-                    {
-                        paramValues.Add(
-                            Convert.ChangeType(
-                                urlParts.ElementAtOrDefault(num), 
-                                param.ParameterType));
-                    }
-                }
+                paramValues.Add(resolver.Resolve());
             }
 
             return paramValues.ToArray();
