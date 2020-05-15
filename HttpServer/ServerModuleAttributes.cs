@@ -23,6 +23,10 @@ namespace AppServerBase.HttpServer
         object ResolveParam(ParameterInfo param, string[] urlParts);
     }
 
+    interface IMultiPartParam
+    {
+
+    }
 
     /// <summary>
     /// Обозначить метод

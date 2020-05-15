@@ -15,7 +15,7 @@ namespace AppServerBase.Utils
             FileRetainedCount = fileRetainedCount;
         }
 
-        public static void Log(string message, string alias = "")
+        public static void Log(string message, string alias = "", string subdir = "")
         {
             var baseAlias = "total";
             var basePrefix = "t";
@@ -26,8 +26,11 @@ namespace AppServerBase.Utils
                 basePrefix = $"{basePrefix}_{alias}";
             }
 
+            if (subdir != "")
+                subdir += "/";
+
             var fileName = basePrefix + "_log_{Date}.txt";
-            var dir = LogDirrectory + "/log/" + baseAlias + "/";
+            var dir = LogDirrectory + "/log/" + subdir + baseAlias + "/";
 
             var log = new LoggerConfiguration()
                 .WriteTo.RollingFile(
@@ -39,7 +42,7 @@ namespace AppServerBase.Utils
             log.Information(message);
         }
 
-        public static void LogDebug(string message, string alias = "")
+        public static void LogDebug(string message, string alias = "", string subdir = "")
         {
             //var dir = LogDirrectory + "/log/total/";
 
@@ -52,8 +55,11 @@ namespace AppServerBase.Utils
                 basePrefix = $"{basePrefix}_{alias}";
             }
 
+            if (subdir != "")
+                subdir += "/";
+
             var fileName = basePrefix + "_log_{Date}.txt";
-            var dir = LogDirrectory + "/log/" + baseAlias + "/";
+            var dir = LogDirrectory + "/log/" + subdir + baseAlias + "/";
 
             var log = new LoggerConfiguration()
                 .WriteTo.RollingFile(

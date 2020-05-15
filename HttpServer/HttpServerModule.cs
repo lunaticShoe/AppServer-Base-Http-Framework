@@ -320,24 +320,5 @@ namespace AppServerBase.HttpServer
             //urlParts = action.Split('/');
             return action; //urlParts[0];
         }
-        
-        //protected SessionBase ValidateSession(string body)
-        //{
-        //    string token = "";
-        //    try
-        //    {
-        //        JObject json = JObject.Parse(body);
-        //        token = json["token"].ToString();
-        //    }
-        //    catch
-        //    {
-        //        throw new ServerException(ClientMsg.GetErrorMsgInvalidJSON().ToString());
-        //    }
-
-        //    if (CheckSessionDelegate != null)
-        //        return CheckSessionDelegate.Invoke(token);
-
-        //    return null; // SessionCache.GetValidSession(token);            
-        //}
     }
 }

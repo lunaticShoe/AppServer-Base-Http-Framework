@@ -70,8 +70,15 @@ class JsonArrayParamResolver : IParamResolver
             throw new ServerException(ClientMsg.GetErrorMsgInvalidJSON());
         }
 
-        
-        return Json[ParamName];
+        if (ParamType.GetTypeInfo().IsSubclassOf(typeof(IEnumerable<>)))
+        {
+
+        }
+
+
+
+
+        return Json[ParamName] as JArray;
         
 
     }

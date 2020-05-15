@@ -30,22 +30,26 @@ namespace AppServerBase.HttpServer.ParamResolver
                 return new JsonParamResolver(attribute.ParamName, paramType, 
                     json, isNotRequired,isSimpleField: true);
             }
-            if (attribute is JSONObjectParamAttribute
-                || attribute is JSONArrayParamAttribute)
+            if (attribute is JSONObjectParamAttribute)
             {
                 return new JsonParamResolver(attribute.ParamName, paramType,
                     json, isNotRequired, isSimpleField: false);
-            }           
+            }
+            if (attribute is JSONArrayParamAttribute)
+            {
+                return new JsonArrayParamResolver(attribute.ParamName, paramType,
+                       json, isNotRequired);
+            }
             if (attribute is MultiPartOSPParamAttribute)
             {
-                return new MultiPartParamResolver(attribute.ParamName, paramType, 
+                return new MultiPartParamResolver(attribute.ParamName, paramType,
                     multipartParams, isNotRequired);
-            } 
+            }
             if (attribute is MultiPartTextParamAttribute)
             {
                 return new MultiPartParamTextResolver(attribute.ParamName, paramType,
                     multipartParams, isNotRequired);
-            } 
+            }
             return null;
         }
     }
