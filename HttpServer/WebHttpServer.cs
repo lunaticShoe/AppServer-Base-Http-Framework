@@ -206,7 +206,7 @@ namespace AppServerBase.HttpServer
 
                     context.Response.StatusCode = (int)HttpStatusCode.OK;
                 }
-                catch (Exception ex)
+                catch //(Exception ex)
                 {
                     context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                 }

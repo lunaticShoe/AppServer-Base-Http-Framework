@@ -20,6 +20,11 @@ namespace AppServerBase.Utils
 
         }
 
+        public DataTableEx(DataTable dataTable)
+        {
+            Assign(dataTable);
+        }
+
         public DataTableEx(System.Runtime.Serialization.SerializationInfo info, 
             System.Runtime.Serialization.StreamingContext context) : base (info,context)
         {

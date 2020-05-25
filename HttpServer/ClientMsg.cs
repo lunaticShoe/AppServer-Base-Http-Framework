@@ -14,6 +14,8 @@ namespace AppServerBase.HttpServer
             return new JObject { { "SymbCode", "OK" } };
         }
 
+        public static JObject OK => GetOKMessage();
+
         public static JObject GetErrorMsgInvalidJSON()
         {
             return GetErrorMsgJsonJ(
